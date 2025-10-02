@@ -4,7 +4,7 @@ import TaskCard from './TaskCard';
 import TaskFormModal from './TaskFormModal';
 import { TaskFactory } from '../models/TaskFactory';
 
-function CollectionView({ collection, onBack, onUpdateCollection }) {
+function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
   const [tasks, setTasks] = useState([]);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -72,12 +72,20 @@ function CollectionView({ collection, onBack, onUpdateCollection }) {
                 <p className="text-gray-600">{collection.description}</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowTaskForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              + Add Task
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowTaskForm(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                + Add Task
+              </button>
+              <button
+                onClick={onLogout}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -25,13 +25,13 @@ api.interceptors.request.use(
 // API Service class
 class ApiService {
   // Auth endpoints
-  async login(email, password) {
-    const response = await api.post('/auth/login', { email, password });
+  async login(username, password) {
+    const response = await api.post('/auth/login', { username, password });
     return response.data;
   }
 
-  async register(name, email, password) {
-    const response = await api.post('/auth/register', { name, email, password });
+  async register(username, name, email, password) {
+    const response = await api.post('/auth/register', { username, name, email, password });
     return response.data;
   }
 

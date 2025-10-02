@@ -34,13 +34,17 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         try {
-            // Check if user already exists
+            // Check if user already exists by username or email
+            if (userRepository.existsByUsername(request.getUsername())) {
+                return new AuthResponse(false, "User with this username already exists");
+            }
             if (userRepository.existsByEmail(request.getEmail())) {
                 return new AuthResponse(false, "User with this email already exists");
             }
 
             // Create new user
             User user = new User();
+            user.setUsername(request.getUsername());
             user.setName(request.getName());
             user.setEmail(request.getEmail());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -48,10 +52,10 @@ public class AuthService {
             User savedUser = userRepository.save(user);
 
             // Create UserDto for response
-            UserDto userDto = new UserDto(savedUser.getId(), savedUser.getName(), savedUser.getEmail());
+            UserDto userDto = new UserDto(savedUser.getId(), savedUser.getUsername(), savedUser.getName(), savedUser.getEmail());
 
             // Generate JWT token
-            UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
+            UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getUsername());
             String jwtToken = jwtService.generateToken(userDetails);
 
             return new AuthResponse(true, "User registered successfully", jwtToken, userDto);
@@ -66,23 +70,23 @@ public class AuthService {
             // Authenticate user
             authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                    request.getEmail(),
+                    request.getUsername(),
                     request.getPassword()
                 )
             );
 
-            // Find user by email
-            User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+            // Find user by username
+            User user = userRepository.findByUsername(request.getUsername()).orElse(null);
             
             if (user == null) {
-                return new AuthResponse(false, "Invalid email or password");
+                return new AuthResponse(false, "Invalid username or password");
             }
 
             // Create UserDto for response
-            UserDto userDto = new UserDto(user.getId(), user.getName(), user.getEmail());
+            UserDto userDto = new UserDto(user.getId(), user.getUsername(), user.getName(), user.getEmail());
 
             // Generate JWT token
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
             String jwtToken = jwtService.generateToken(userDetails);
 
             return new AuthResponse(true, "Login successful", jwtToken, userDto);

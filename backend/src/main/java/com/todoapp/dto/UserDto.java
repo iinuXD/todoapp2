@@ -2,14 +2,16 @@ package com.todoapp.dto;
 
 public class UserDto {
     private Long id;
+    private String username;
     private String name;
     private String email;
 
     // Constructors
     public UserDto() {}
 
-    public UserDto(Long id, String name, String email) {
+    public UserDto(Long id, String username, String name, String email) {
         this.id = id;
+        this.username = username;
         this.name = name;
         this.email = email;
     }
@@ -21,6 +23,14 @@ public class UserDto {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getName() {

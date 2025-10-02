@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 function LoginForm({ onToggle }) {
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -13,7 +13,7 @@ function LoginForm({ onToggle }) {
     setLoading(true);
     setError('');
 
-    const result = await login(email, password);
+    const result = await login(username, password);
     if (!result.success) {
       setError(result.message);
     }
@@ -35,12 +35,12 @@ function LoginForm({ onToggle }) {
           )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Username
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
@@ -74,7 +74,7 @@ function LoginForm({ onToggle }) {
           </button>
         </div>
         <div className="text-xs text-gray-500 text-center">
-          Demo credentials: admin@example.com / password
+          Demo: Create an account with username and password
         </div>
       </div>
     </div>

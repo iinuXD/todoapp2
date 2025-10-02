@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test User Collections</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Test User-Specific Collections</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Register User A</h3>
+        <button onclick="registerUser('testuser1', 'testuser1', 'password123')">Register User A</button>
+        <div id="user1-register-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Login User A and Create Collection</h3>
+        <button onclick="loginAndCreateCollection('testuser1', 'password123', 'User A Collection')">Login User A & Create Collection</button>
+        <div id="user1-collection-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Register User B</h3>
+        <button onclick="registerUser('testuser2', 'testuser2', 'password123')">Register User B</button>
+        <div id="user2-register-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 4: Login User B and Create Collection</h3>
+        <button onclick="loginAndCreateCollection('testuser2', 'password123', 'User B Collection')">Login User B & Create Collection</button>
+        <div id="user2-collection-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 5: Login User A and Check Collections</h3>
+        <button onclick="loginAndCheckCollections('testuser1', 'password123')">Login User A & Check Collections</button>
+        <div id="user1-check-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 6: Login User B and Check Collections</h3>
+        <button onclick="loginAndCheckCollections('testuser2', 'password123')">Login User B & Check Collections</button>
+        <div id="user2-check-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        let userTokens = {};
+
+        async function registerUser(username, fullName, password) {
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, fullName, password })
+                });
+                
+                const data = await response.json();
+                const resultEl = document.getElementById(`${username.replace('testuser', 'user')}-register-result`);
+                
+                if (data.success) {
+                    resultEl.innerHTML = `<span class="success">✓ User ${username} registered successfully</span>`;
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Registration failed: ${data.message}</span>`;
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+            }
+        }
+
+        async function loginAndCreateCollection(username, password, collectionName) {
+            try {
+                // Login
+                const loginResponse = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const loginData = await loginResponse.json();
+                const resultEl = document.getElementById(`${username.replace('testuser', 'user')}-collection-result`);
+                
+                if (!loginData.success) {
+                    resultEl.innerHTML = `<span class="error">✗ Login failed: ${loginData.message}</span>`;
+                    return;
+                }
+                
+                userTokens[username] = loginData.token;
+                
+                // Create collection
+                const collectionResponse = await fetch(`${API_BASE}/collections`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loginData.token}`
+                    },
+                    body: JSON.stringify({ name: collectionName })
+                });
+                
+                const collectionData = await collectionResponse.json();
+                
+                if (collectionData.success) {
+                    resultEl.innerHTML = `<span class="success">✓ ${username} logged in and created collection "${collectionName}"</span>`;
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Collection creation failed: ${collectionData.message}</span>`;
+                }
+            } catch (error) {
+                console.error('Login/Create collection error:', error);
+            }
+        }
+
+        async function loginAndCheckCollections(username, password) {
+            try {
+                // Login
+                const loginResponse = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const loginData = await loginResponse.json();
+                const resultEl = document.getElementById(`${username.replace('testuser', 'user')}-check-result`);
+                
+                if (!loginData.success) {
+                    resultEl.innerHTML = `<span class="error">✗ Login failed: ${loginData.message}</span>`;
+                    return;
+                }
+                
+                // Get collections
+                const collectionsResponse = await fetch(`${API_BASE}/collections`, {
+                    headers: { 
+                        'Authorization': `Bearer ${loginData.token}`
+                    }
+                });
+                
+                const collectionsData = await collectionsResponse.json();
+                
+                if (collectionsData.success) {
+                    const collections = collectionsData.data;
+                    resultEl.innerHTML = `<span class="success">✓ ${username} has ${collections.length} collection(s): ${collections.map(c => c.name).join(', ')}</span>`;
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Failed to get collections: ${collectionsData.message}</span>`;
+                }
+            } catch (error) {
+                console.error('Check collections error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

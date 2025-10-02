@@ -24,9 +24,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
-      const response = await apiService.login(email, password);
+      const response = await apiService.login(username, password);
       
       if (response.success) {
         apiService.setToken(response.token);
@@ -41,9 +41,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password) => {
+  const register = async (username, name, email, password) => {
     try {
-      const response = await apiService.register(name, email, password);
+      const response = await apiService.register(username, name, email, password);
       
       if (response.success) {
         apiService.setToken(response.token);

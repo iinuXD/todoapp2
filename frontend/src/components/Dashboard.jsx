@@ -4,12 +4,12 @@ import apiService from '../services/api';
 import CollectionView from './CollectionView';
 import NewCollectionModal from './NewCollectionModal';
 
-function Dashboard() {
+function Dashboard({ onLogout }) {
   const [collections, setCollections] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [showNewCollection, setShowNewCollection] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadCollections();
@@ -51,6 +51,7 @@ function Dashboard() {
       <CollectionView 
         collection={selectedCollection}
         onBack={() => setSelectedCollection(null)}
+        onLogout={onLogout}
         onUpdateCollection={(updatedCollection) => {
           setSelectedCollection(updatedCollection);
           // Update in collections list too
@@ -73,7 +74,7 @@ function Dashboard() {
               <p className="text-gray-600">Welcome back, {user?.name}</p>
             </div>
             <button
-              onClick={logout}
+              onClick={onLogout}
               className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
             >
               Sign Out

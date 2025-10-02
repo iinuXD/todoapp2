@@ -7,7 +7,13 @@ import './index.css';
 
 function AppContent() {
   const [isLogin, setIsLogin] = useState(true);
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
+
+  // Enhanced logout that resets to login form
+  const handleLogout = () => {
+    logout();
+    setIsLogin(true); // Ensure we go back to login form, not register
+  };
 
   if (loading) {
     return (
@@ -28,7 +34,7 @@ function AppContent() {
     );
   }
 
-  return <Dashboard />;
+  return <Dashboard onLogout={handleLogout} />;
 }
 
 function App() {
