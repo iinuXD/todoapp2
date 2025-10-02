@@ -7,6 +7,9 @@ import com.todoapp.dto.UserDto;
 import com.todoapp.entity.User;
 import com.todoapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,15 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
         try {
@@ -37,8 +49,11 @@ public class AuthService {
             // Create UserDto for response
             UserDto userDto = new UserDto(savedUser.getId(), savedUser.getName(), savedUser.getEmail());
 
-            // For now, return without JWT token - will add JWT later
-            return new AuthResponse(true, "User registered successfully", "mock-jwt-token", userDto);
+            // Generate JWT token
+            UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
+            String jwtToken = jwtService.generateToken(userDetails);
+
+            return new AuthResponse(true, "User registered successfully", jwtToken, userDto);
 
         } catch (Exception e) {
             return new AuthResponse(false, "Registration failed: " + e.getMessage());
@@ -47,6 +62,14 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         try {
+            // Authenticate user
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    request.getEmail(),
+                    request.getPassword()
+                )
+            );
+
             // Find user by email
             User user = userRepository.findByEmail(request.getEmail()).orElse(null);
             
@@ -54,19 +77,17 @@ public class AuthService {
                 return new AuthResponse(false, "Invalid email or password");
             }
 
-            // Check password
-            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                return new AuthResponse(false, "Invalid email or password");
-            }
-
             // Create UserDto for response
             UserDto userDto = new UserDto(user.getId(), user.getName(), user.getEmail());
 
-            // For now, return without JWT token - will add JWT later
-            return new AuthResponse(true, "Login successful", "mock-jwt-token", userDto);
+            // Generate JWT token
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+            String jwtToken = jwtService.generateToken(userDetails);
+
+            return new AuthResponse(true, "Login successful", jwtToken, userDto);
 
         } catch (Exception e) {
-            return new AuthResponse(false, "Login failed: " + e.getMessage());
+            return new AuthResponse(false, "Login failed: Invalid email or password");
         }
     }
 }
