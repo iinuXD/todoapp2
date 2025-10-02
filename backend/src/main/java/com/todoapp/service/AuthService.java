@@ -1,17 +1,18 @@
 package com.todoapp.service;
 
-import com.todoapp.dto.AuthResponse;
-import com.todoapp.dto.LoginRequest;
-import com.todoapp.dto.RegisterRequest;
-import com.todoapp.dto.UserDto;
-import com.todoapp.entity.User;
-import com.todoapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.todoapp.dto.AuthResponse;
+import com.todoapp.dto.LoginRequest;
+import com.todoapp.dto.RegisterRequest;
+import com.todoapp.dto.UserDto;
+import com.todoapp.entity.User;
+import com.todoapp.repository.UserRepository;
 
 @Service
 public class AuthService {

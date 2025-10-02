@@ -1,14 +1,15 @@
 package com.todoapp.service;
 
-import com.todoapp.entity.User;
-import com.todoapp.repository.UserRepository;
+import java.util.ArrayList;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import com.todoapp.entity.User;
+import com.todoapp.repository.UserRepository;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
