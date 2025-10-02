@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise To-Do App</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.4s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+        
+        .task-card {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, createContext, useContext } = React;
+
+        // Auth Context
+        const AuthContext = createContext();
+
+        // Mock API Service (simulates backend with SOLID principles)
+        class ApiService {
+            constructor() {
+                this.baseUrl = '/api';
+                this.token = localStorage.getItem('token');
+            }
+
+            setToken(token) {
+                this.token = token;
+                localStorage.setItem('token', token);
+            }
+
+            clearToken() {
+                this.token = null;
+                localStorage.removeItem('token');
+            }
+
+            async request(endpoint, options = {}) {
+                const url = `${this.baseUrl}${endpoint}`;
+                const config = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(this.token && { Authorization: `Bearer ${this.token}` }),
+                    },
+                    ...options,
+                };
+
+                // Simulate API calls with localStorage
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve(this.mockApiCall(endpoint, config));
+                    }, 500);
+                });
+            }
+
+            mockApiCall(endpoint, config) {
+                const method = config.method || 'GET';
+                
+                if (endpoint === '/auth/login' && method === 'POST') {
+                    const { email, password } = JSON.parse(config.body);
+                    if (email === 'admin@example.com' && password === 'password') {
+                        return { success: true, token: 'mock-jwt-token', user: { id: 1, email, name: 'Admin User' } };
+                    }
+                    return { success: false, message: 'Invalid credentials' };
+                }
+
+                if (endpoint === '/auth/register' && method === 'POST') {
+                    const { name, email, password } = JSON.parse(config.body);
+                    return { success: true, token: 'mock-jwt-token', user: { id: 1, email, name } };
+                }
+
+                if (endpoint === '/collections' && method === 'GET') {
+                    const collections = JSON.parse(localStorage.getItem('collections') || '[]');
+                    return { success: true, data: collections };
+                }
+
+                if (endpoint === '/collections' && method === 'POST') {
+                    const collections = JSON.parse(localStorage.getItem('collections') || '[]');
+                    const newCollection = { id: Date.now(), ...JSON.parse(config.body), tasks: [] };
+                    collections.push(newCollection);
+                    localStorage.setItem('collections', JSON.stringify(collections));
+                    return { success: true, data: newCollection };
+                }
+
+                if (endpoint.startsWith('/collections/') && endpoint.endsWith('/tasks') && method === 'POST') {
+                    const collectionId = parseInt(endpoint.split('/')[2]);
+                    const collections = JSON.parse(localStorage.getItem('collections') || '[]');
+                    const collection = collections.find(c => c.id === collectionId);
+                    if (collection) {
+                        const newTask = { id: Date.now(), ...JSON.parse(config.body) };
+                        collection.tasks.push(newTask);
+                        localStorage.setItem('collections', JSON.stringify(collections));
+                        return { success: true, data: newTask };
+                    }
+                }
+
+                if (endpoint.startsWith('/tasks/') && endpoint.endsWith('/add-money') && method === 'POST') {
+                    const taskId = parseInt(endpoint.split('/')[2]);
+                    const { amount } = JSON.parse(config.body);
+                    const collections = JSON.parse(localStorage.getItem('collections') || '[]');
+                    
+                    for (let collection of collections) {
+                        const task = collection.tasks.find(t => t.id === taskId);
+                        if (task && task.type === 'saving') {
+                            task.currentAmount = (task.currentAmount || 0) + amount;
+                            localStorage.setItem('collections', JSON.stringify(collections));
+                            return { success: true, data: task };
+                        }
+                    }
+                }
+
+                return { success: true, data: [] };
+            }
+        }
+
+        const api = new ApiService();
+
+        // Task Factory (Polymorphism implementation)
+        class TaskFactory {
+            static createTask(type, data) {
+                switch (type) {
+                    case 'standard':
+                        return new StandardTask(data);
+                    case 'deadline':
+                        return new DeadlineTask(data);
+                    case 'saving':
+                        return new SavingGoalTask(data);
+                    default:
+                        throw new Error(`Unknown task type: ${type}`);
+                }
+            }
+        }
+
+        // Base Task Class
+        class BaseTask {
+            constructor(data) {
+                this.id = data.id;
+                this.title = data.title;
+                this.description = data.description;
+                this.completed = data.completed || false;
+                this.type = data.type;
+                this.createdAt = data.createdAt || new Date().toISOString();
+            }
+
+            getDisplayInfo() {
+                return {
+                    title: this.title,
+                    description: this.description,
+                    completed: this.completed,
+                    type: this.type
+                };
+            }
+        }
+
+        // Concrete Task Classes
+        class StandardTask extends BaseTask {
+            constructor(data) {
+                super(data);
+                this.type = 'standard';
+            }
+
+            getDisplayInfo() {
+                return {
+                    ...super.getDisplayInfo(),
+                    icon: '📝',
+                    color: 'blue'
+                };
+            }
+        }
+
+        class DeadlineTask extends BaseTask {
+            constructor(data) {
+                super(data);
+                this.type = 'deadline';
+                this.dueDate = data.dueDate;
+            }
+
+            getDisplayInfo() {
+                const daysLeft = Math.ceil((new Date(this.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+                return {
+                    ...super.getDisplayInfo(),
+                    icon: '⏰',
+                    color: daysLeft < 3 ? 'red' : 'orange',
+                    dueDate: this.dueDate,
+                    daysLeft: daysLeft > 0 ? `${daysLeft} days left` : 'Overdue'
+                };
+            }
+        }
+
+        class SavingGoalTask extends BaseTask {
+            constructor(data) {
+                super(data);
+                this.type = 'saving';
+                this.targetAmount = data.targetAmount;
+                this.currentAmount = data.currentAmount || 0;
+            }
+
+            getDisplayInfo() {
+                const progress = (this.currentAmount / this.targetAmount) * 100;
+                return {
+                    ...super.getDisplayInfo(),
+                    icon: '💰',
+                    color: 'green',
+                    targetAmount: this.targetAmount,
+                    currentAmount: this.currentAmount,
+                    progress: Math.min(progress, 100)
+                };
+            }
+        }
+
+        // Auth Provider Component
+        function AuthProvider({ children }) {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    setUser({ id: 1, email: 'admin@example.com', name: 'Admin User' });
+                }
+                setLoading(false);
+            }, []);
+
+            const login = async (email, password) => {
+                const response = await api.request('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.success) {
+                    api.setToken(response.token);
+                    setUser(response.user);
+                    return { success: true };
+                }
+                return { success: false, message: response.message };
+            };
+
+            const register = async (name, email, password) => {
+                const response = await api.request('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                if (response.success) {
+                    api.setToken(response.token);
+                    setUser(response.user);
+                    return { success: true };
+                }
+                return { success: false, message: response.message };
+            };
+
+            const logout = () => {
+                api.clearToken();
+                setUser(null);
+            };
+
+            return (
+                <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+                    {children}
+                </AuthContext.Provider>
+            );
+        }
+
+        // Login Component
+        function LoginForm({ onToggle }) {
+            const [email, setEmail] = useState('admin@example.com');
+            const [password, setPassword] = useState('password');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const { login } = useContext(AuthContext);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+
+                const result = await login(email, password);
+                if (!result.success) {
+                    setError(result.message);
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                    <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+                        <div className="text-center">
+                            <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
+                            <p className="mt-2 text-gray-600">Access your enterprise dashboard</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                                    {error}
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            >
+                                {loading ? 'Signing In...' : 'Sign In'}
+                            </button>
+                        </form>
+                        <div className="text-center">
+                            <button
+                                onClick={onToggle}
+                                className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                                Don't have an account? Register
+                            </button>
+                        </div>
+                        <div className="text-xs text-gray-500 text-center">
+                            Demo credentials: admin@example.com / password
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Register Component
+        function RegisterForm({ onToggle }) {
+            const [name, setName] = useState('');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const { register } = useContext(AuthContext);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                await register(name, email, password);
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                    <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+                        <div className="text-center">
+                            <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
+                            <p className="mt-2 text-gray-600">Join our enterprise platform</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Full Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            >
+                                {loading ? 'Creating Account...' : 'Create Account'}
+                            </button>
+                        </form>
+                        <div className="text-center">
+                            <button
+                                onClick={onToggle}
+                                className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                                Already have an account? Sign In
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Dashboard Component
+        function Dashboard() {
+            const [collections, setCollections] = useState([]);
+            const [selectedCollection, setSelectedCollection] = useState(null);
+            const [showNewCollection, setShowNewCollection] = useState(false);
+            const [showTaskForm, setShowTaskForm] = useState(false);
+            const { user, logout } = useContext(AuthContext);
+
+            useEffect(() => {
+                loadCollections();
+            }, []);
+
+            const loadCollections = async () => {
+                const response = await api.request('/collections');
+                if (response.success) {
+                    setCollections(response.data);
+                }
+            };
+
+            const createCollection = async (name, description) => {
+                const response = await api.request('/collections', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, description })
+                });
+                if (response.success) {
+                    setCollections([...collections, response.data]);
+                    setShowNewCollection(false);
+                }
+            };
+
+            const addTaskToCollection = async (collectionId, taskData) => {
+                const response = await api.request(`/collections/${collectionId}/tasks`, {
+                    method: 'POST',
+                    body: JSON.stringify(taskData)
+                });
+                if (response.success) {
+                    const updatedCollections = collections.map(c => 
+                        c.id === collectionId 
+                            ? { ...c, tasks: [...c.tasks, response.data] }
+                            : c
+                    );
+                    setCollections(updatedCollections);
+                    setShowTaskForm(false);
+                }
+            };
+
+            const updateTaskMoney = async (taskId, amount) => {
+                const response = await api.request(`/tasks/${taskId}/add-money`, {
+                    method: 'POST',
+                    body: JSON.stringify({ amount })
+                });
+                if (response.success) {
+                    const updatedCollections = collections.map(collection => ({
+                        ...collection,
+                        tasks: collection.tasks.map(task => 
+                            task.id === taskId 
+                                ? { ...task, currentAmount: (task.currentAmount || 0) + amount }
+                                : task
+                        )
+                    }));
+                    setCollections(updatedCollections);
+                    if (selectedCollection) {
+                        const updatedSelected = updatedCollections.find(c => c.id === selectedCollection.id);
+                        setSelectedCollection(updatedSelected);
+                    }
+                }
+            };
+
+            if (selectedCollection) {
+                return (
+                    <CollectionView 
+                        collection={selectedCollection}
+                        onBack={() => setSelectedCollection(null)}
+                        onAddTask={(taskData) => addTaskToCollection(selectedCollection.id, taskData)}
+                        onUpdateTaskMoney={updateTaskMoney}
+                        showTaskForm={showTaskForm}
+                        setShowTaskForm={setShowTaskForm}
+                    />
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {/* Header */}
+                    <header className="bg-white shadow-sm border-b">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center py-4">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-900">Enterprise Dashboard</h1>
+                                    <p className="text-gray-600">Welcome back, {user?.name}</p>
+                                </div>
+                                <button
+                                    onClick={logout}
+                                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                                >
+                                    Sign Out
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {/* Collections Grid */}
+                        <div className="mb-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-semibold text-gray-900">Your Collections</h2>
+                                <button
+                                    onClick={() => setShowNewCollection(true)}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                                >
+                                    + New Collection
+                                </button>
+                            </div>
+
+                            {collections.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <div className="text-6xl mb-4">📋</div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No collections yet</h3>
+                                    <p className="text-gray-600">Create your first collection to get started</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {collections.map(collection => (
+                                        <div
+                                            key={collection.id}
+                                            onClick={() => setSelectedCollection(collection)}
+                                            className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                                        >
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                                {collection.name}
+                                            </h3>
+                                            <p className="text-gray-600 mb-4">{collection.description}</p>
+                                            <div className="flex justify-between text-sm text-gray-500">
+                                                <span>{collection.tasks?.length || 0} tasks</span>
+                                                <span>→</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* New Collection Modal */}
+                    {showNewCollection && (
+                        <NewCollectionModal
+                            onClose={() => setShowNewCollection(false)}
+                            onCreate={createCollection}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        // Collection View Component
+        function CollectionView({ collection, onBack, onAddTask, onUpdateTaskMoney, showTaskForm, setShowTaskForm }) {
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <header className="bg-white shadow-sm border-b">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex items-center justify-between py-4">
+                                <div className="flex items-center">
+                                    <button
+                                        onClick={onBack}
+                                        className="mr-4 text-gray-600 hover:text-gray-900"
+                                    >
+                                        ← Back
+                                    </button>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-gray-900">{collection.name}</h1>
+                                        <p className="text-gray-600">{collection.description}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowTaskForm(true)}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                                >
+                                    + Add Task
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {collection.tasks?.length === 0 ? (
+                            <div className="text-center py-12">
+                                <div className="text-6xl mb-4">✅</div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
+                                <p className="text-gray-600">Add your first task to get started</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {collection.tasks?.map(taskData => {
+                                    const task = TaskFactory.createTask(taskData.type, taskData);
+                                    const displayInfo = task.getDisplayInfo();
+                                    
+                                    return (
+                                        <TaskCard 
+                                            key={task.id} 
+                                            task={task} 
+                                            displayInfo={displayInfo}
+                                            onUpdateTaskMoney={onUpdateTaskMoney}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {showTaskForm && (
+                        <TaskFormModal
+                            onClose={() => setShowTaskForm(false)}
+                            onSubmit={onAddTask}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        // Task Card Component (Polymorphic Display)
+        function TaskCard({ task, displayInfo, onUpdateTaskMoney }) {
+            const [showAddMoney, setShowAddMoney] = useState(false);
+
+            return (
+                <>
+                    <div className={`task-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-${displayInfo.color}-500`}>
+                        <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-3">
+                                <span className="text-2xl">{displayInfo.icon}</span>
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-gray-900">{displayInfo.title}</h3>
+                                    <p className="text-gray-600 mt-1">{displayInfo.description}</p>
+                                    
+                                    {/* Type-specific content */}
+                                    {displayInfo.type === 'deadline' && (
+                                        <div className="mt-3">
+                                            <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                                displayInfo.color === 'red' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+                                            }`}>
+                                                Due: {new Date(displayInfo.dueDate).toLocaleDateString()} • {displayInfo.daysLeft}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    {displayInfo.type === 'saving' && (
+                                        <div className="mt-3">
+                                            <div className="flex justify-between text-sm text-gray-600 mb-1">
+                                                <span>${displayInfo.currentAmount.toLocaleString()}</span>
+                                                <span>${displayInfo.targetAmount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div 
+                                                    className="progress-bar bg-green-600 h-2 rounded-full"
+                                                    style={{ width: `${displayInfo.progress}%` }}
+                                                ></div>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <div className="text-sm text-gray-600">
+                                                    {displayInfo.progress.toFixed(1)}% complete
+                                                </div>
+                                                <button
+                                                    onClick={() => setShowAddMoney(true)}
+                                                    className="bg-green-600 text-white px-3 py-1 text-xs rounded-full hover:bg-green-700 transition-colors"
+                                                >
+                                                    + Add Money
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={displayInfo.completed}
+                                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    readOnly
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Add Money Modal */}
+                    {showAddMoney && (
+                        <AddMoneyModal
+                            task={task}
+                            onClose={() => setShowAddMoney(false)}
+                            onAddMoney={(amount) => {
+                                onUpdateTaskMoney(task.id, amount);
+                                setShowAddMoney(false);
+                            }}
+                        />
+                    )}
+                </>
+            );
+        }
+
+        // Add Money Modal Component
+        function AddMoneyModal({ task, onClose, onAddMoney }) {
+            const [amount, setAmount] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                const numAmount = parseFloat(amount);
+                if (numAmount > 0) {
+                    setLoading(true);
+                    await onAddMoney(numAmount);
+                    setLoading(false);
+                }
+            };
+
+            const quickAmounts = [10, 25, 50, 100, 250, 500];
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">Add Money to Goal</h3>
+                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                                ✕
+                            </button>
+                        </div>
+                        
+                        <div className="mb-4">
+                            <h4 className="font-medium text-gray-900">{task.title}</h4>
+                            <div className="text-sm text-gray-600 mt-1">
+                                Current: ${task.currentAmount.toLocaleString()} / Target: ${task.targetAmount.toLocaleString()}
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                <div 
+                                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.min((task.currentAmount / task.targetAmount) * 100, 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Amount to Add ($)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="0.00"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Quick Add
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {quickAmounts.map(quickAmount => (
+                                        <button
+                                            key={quickAmount}
+                                            type="button"
+                                            onClick={() => setAmount(quickAmount.toString())}
+                                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        >
+                                            ${quickAmount}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="flex space-x-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading || !amount || parseFloat(amount) <= 0}
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                >
+                                    {loading ? 'Adding...' : 'Add Money'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Task Form Modal (Polymorphic Input)
+        function TaskFormModal({ onClose, onSubmit }) {
+            const [taskType, setTaskType] = useState('standard');
+            const [title, setTitle] = useState('');
+            const [description, setDescription] = useState('');
+            const [dueDate, setDueDate] = useState('');
+            const [targetAmount, setTargetAmount] = useState('');
+            const [currentAmount, setCurrentAmount] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                
+                const baseData = { title, description, type: taskType };
+                
+                if (taskType === 'deadline') {
+                    baseData.dueDate = dueDate;
+                } else if (taskType === 'saving') {
+                    baseData.targetAmount = parseFloat(targetAmount);
+                    baseData.currentAmount = parseFloat(currentAmount) || 0;
+                }
+                
+                onSubmit(baseData);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">Add New Task</h3>
+                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                                ✕
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Task Type
+                                </label>
+                                <select
+                                    value={taskType}
+                                    onChange={(e) => setTaskType(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="standard">📝 Standard Task</option>
+                                    <option value="deadline">⏰ Deadline Task</option>
+                                    <option value="saving">💰 Saving Goal</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Title
+                                </label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Description
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows="3"
+                                />
+                            </div>
+                            
+                            {/* Dynamic fields based on task type */}
+                            {taskType === 'deadline' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Due Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => setDueDate(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required
+                                    />
+                                </div>
+                            )}
+                            
+                            {taskType === 'saving' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Target Amount ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={targetAmount}
+                                            onChange={(e) => setTargetAmount(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            min="0"
+                                            step="0.01"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Current Amount ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={currentAmount}
+                                            onChange={(e) => setCurrentAmount(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            min="0"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            
+                            <div className="flex space-x-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                >
+                                    Add Task
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // New Collection Modal
+        function NewCollectionModal({ onClose, onCreate }) {
+            const [name, setName] = useState('');
+            const [description, setDescription] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onCreate(name, description);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">Create New Collection</h3>
+                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                                ✕
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Collection Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., Work Projects, Personal Goals"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Description
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Brief description of this collection"
+                                    rows="3"
+                                />
+                            </div>
+                            
+                            <div className="flex space-x-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                >
+                                    Create Collection
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [isLogin, setIsLogin] = useState(true);
+            const { user, loading } = useContext(AuthContext);
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!user) {
+                return isLogin ? 
+                    <LoginForm onToggle={() => setIsLogin(false)} /> :
+                    <RegisterForm onToggle={() => setIsLogin(true)} />;
+            }
+
+            return <Dashboard />;
+        }
+
+        // Root App with Auth Provider
+        function RootApp() {
+            return (
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            );
+        }
+
+        ReactDOM.render(<RootApp />, document.getElementById('root'));
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'987c8ad73202d03a',t:'MTc1OTMyNzgxNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
