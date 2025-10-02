@@ -8,6 +8,7 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
   const [tasks, setTasks] = useState([]);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -55,6 +56,24 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
     }
   };
 
+  const deleteCollection = async () => {
+    try {
+      const response = await apiService.deleteCollection(collection.id);
+      if (response.success) {
+        // Go back to dashboard after successful deletion
+        onBack();
+      } else {
+        console.error('Failed to delete collection:', response.message);
+        alert('Failed to delete collection. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting collection:', error);
+      alert('Error deleting collection. Please try again.');
+    } finally {
+      setShowDeleteModal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
@@ -78,6 +97,12 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
               >
                 + Add Task
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+              >
+                Delete Collection
               </button>
               <button
                 onClick={onLogout}
@@ -126,6 +151,34 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
           onClose={() => setShowTaskForm(false)}
           onSubmit={addTaskToCollection}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Delete Collection
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{collection.name}"? This action cannot be undone and will delete all tasks in this collection.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteCollection}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -50,7 +50,11 @@ function Dashboard({ onLogout }) {
     return (
       <CollectionView 
         collection={selectedCollection}
-        onBack={() => setSelectedCollection(null)}
+        onBack={() => {
+          setSelectedCollection(null);
+          // Reload collections to reflect any changes (like deletion)
+          loadCollections();
+        }}
         onLogout={onLogout}
         onUpdateCollection={(updatedCollection) => {
           setSelectedCollection(updatedCollection);
