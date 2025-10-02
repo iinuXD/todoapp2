@@ -9,6 +9,8 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', description: '' });
 
   useEffect(() => {
     loadTasks();
@@ -74,6 +76,27 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
     }
   };
 
+  const handleEditCollection = () => {
+    setEditForm({ name: collection.name, description: collection.description || '' });
+    setShowEditModal(true);
+  };
+
+  const updateCollection = async () => {
+    try {
+      const response = await apiService.updateCollection(collection.id, editForm.name, editForm.description);
+      if (response.success) {
+        onUpdateCollection(response.data);
+        setShowEditModal(false);
+      } else {
+        console.error('Failed to update collection:', response.message);
+        alert('Failed to update collection. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating collection:', error);
+      alert('Error updating collection. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
@@ -99,16 +122,16 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
                 + Add Task
               </button>
               <button
+                onClick={handleEditCollection}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                Edit Collection
+              </button>
+              <button
                 onClick={() => setShowDeleteModal(true)}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
               >
                 Delete Collection
-              </button>
-              <button
-                onClick={onLogout}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-              >
-                Sign Out
               </button>
             </div>
           </div>
@@ -151,6 +174,58 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
           onClose={() => setShowTaskForm(false)}
           onSubmit={addTaskToCollection}
         />
+      )}
+
+      {/* Edit Collection Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Edit Collection
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Collection Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter collection name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  rows="3"
+                  placeholder="Enter collection description"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateCollection}
+                disabled={!editForm.name.trim()}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}

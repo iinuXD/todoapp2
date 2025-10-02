@@ -17,9 +17,18 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = apiService.getToken();
-    if (token) {
-      // For now, set a mock user since we don't have JWT verification
-      setUser({ id: 1, email: 'admin@example.com', name: 'Admin User' });
+    const savedUser = localStorage.getItem('user');
+    
+    if (token && savedUser) {
+      // Restore user data from localStorage
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing saved user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('user');
+        apiService.clearToken();
+      }
     }
     setLoading(false);
   }, []);
@@ -30,7 +39,10 @@ export const AuthProvider = ({ children }) => {
       
       if (response.success) {
         apiService.setToken(response.token);
+        // Use the real user data from the backend response
         setUser(response.user);
+        // Persist user data in localStorage
+        localStorage.setItem('user', JSON.stringify(response.user));
         return { success: true };
       } else {
         return { success: false, message: response.message };
@@ -47,7 +59,10 @@ export const AuthProvider = ({ children }) => {
       
       if (response.success) {
         apiService.setToken(response.token);
+        // Use the real user data from the backend response
         setUser(response.user);
+        // Persist user data in localStorage
+        localStorage.setItem('user', JSON.stringify(response.user));
         return { success: true };
       } else {
         return { success: false, message: response.message };
@@ -60,6 +75,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     apiService.clearToken();
+    localStorage.removeItem('user');
     setUser(null);
   };
 
