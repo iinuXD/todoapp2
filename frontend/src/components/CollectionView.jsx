@@ -58,6 +58,16 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
     }
   };
 
+  const handleTaskDeleted = (taskId) => {
+    // Remove the deleted task from the local state
+    setTasks(tasks.filter(task => task.id !== taskId));
+  };
+
+  const handleTaskUpdated = () => {
+    // Reload tasks to get updated data
+    loadTasks();
+  };
+
   const deleteCollection = async () => {
     try {
       const response = await apiService.deleteCollection(collection.id);
@@ -162,6 +172,8 @@ function CollectionView({ collection, onBack, onLogout, onUpdateCollection }) {
                   task={task} 
                   displayInfo={displayInfo}
                   onUpdateTaskMoney={updateTaskMoney}
+                  onTaskDeleted={handleTaskDeleted}
+                  onTaskUpdated={handleTaskUpdated}
                 />
               );
             })}
