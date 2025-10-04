@@ -30,8 +30,14 @@ class ApiService {
     return response.data;
   }
 
-  async register(username, name, email, password) {
-    const response = await api.post('/auth/register', { username, name, email, password });
+  async register(username, name, email, password, confirmPassword) {
+    const response = await api.post('/auth/register', { 
+      username, 
+      name, 
+      email, 
+      password,
+      confirmPassword 
+    });
     return response.data;
   }
 

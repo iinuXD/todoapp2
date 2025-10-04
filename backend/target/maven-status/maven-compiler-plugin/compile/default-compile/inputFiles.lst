@@ -7,14 +7,17 @@ E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\repository\TodoRepos
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\controller\TodoCollectionController.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\config\DataInitializer.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\strategy\TodoStrategyFactory.java
+E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\config\RateLimitingConfig.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\config\SecurityConfig.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\entity\Todo.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\TodoCalculationService.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\JwtService.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\strategy\DeadlineTodoStrategy.java
+E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\config\SecurityHeadersConfig.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\dto\LoginRequest.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\entity\User.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\config\JwtAuthenticationFilter.java
+E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\util\SecurityValidator.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\strategy\TodoCompletionStrategy.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\TodoService.java
 E:\VScodeProject\todoapp2\backend\src\main\java\com\todoapp\service\strategy\SavingTodoStrategy.java
