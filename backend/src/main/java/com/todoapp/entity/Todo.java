@@ -1,11 +1,11 @@
 package com.todoapp.entity;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,6 +22,11 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Todo entity following Single Responsibility Principle (SRP).
+ * Responsibility: Data persistence and basic entity operations only.
+ * Business logic has been moved to separate service classes.
+ */
 @Entity
 @Table(name = "todos")
 public class Todo {
@@ -91,16 +96,7 @@ public class Todo {
         updatedAt = LocalDateTime.now();
     }
 
-    // Helper methods
-    public BigDecimal getProgress() {
-        if (type == TodoType.SAVING && targetAmount != null && targetAmount.compareTo(BigDecimal.ZERO) > 0) {
-            return currentAmount.divide(targetAmount, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100));
-        }
-        return BigDecimal.ZERO;
-    }
-
-    // Getters and Setters
+    // Getters and Setters - only data access methods (SRP compliance)
     public Long getId() {
         return id;
     }

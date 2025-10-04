@@ -258,23 +258,32 @@ todoapp2/
 ├── backend/                 # Spring Boot application
 │   ├── src/main/java/
 │   │   └── com/todoapp/
-│   │       ├── controller/  # REST controllers
-│   │       ├── service/     # Business logic
-│   │       ├── repository/  # Data access
-│   │       ├── entity/      # JPA entities
-│   │       ├── dto/         # Data transfer objects
-│   │       └── config/      # Configuration classes
+│   │       ├── controller/  # REST controllers (SRP)
+│   │       ├── service/     # Business logic services (SRP, DIP)
+│   │       │   └── strategy/# Strategy pattern implementations (OCP, LSP)
+│   │       ├── repository/  # Data access layer (ISP, DIP)
+│   │       ├── entity/      # JPA entities (SRP)
+│   │       ├── dto/         # Data transfer objects (SRP)
+│   │       └── config/      # Configuration classes (SRP)
 │   └── src/main/resources/
 │       └── application.properties
 ├── frontend/                # React application
 │   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── context/         # State management
-│   │   ├── services/        # API services
-│   │   └── models/          # Business logic
+│   │   ├── components/      # React components (SRP)
+│   │   ├── context/         # State management (SRP)
+│   │   ├── services/        # API services (SRP)
+│   │   └── models/          # Business logic (SRP, OCP)
 │   └── public/
 └── README.md
 ```
+
+### 🎯 **SOLID Implementation Highlights**
+
+- **Strategy Factory**: `service/strategy/TodoStrategyFactory.java`
+- **Strategy Interface**: `service/strategy/TodoCompletionStrategy.java`  
+- **Concrete Strategies**: `StandardTodoStrategy.java`, `DeadlineTodoStrategy.java`, `SavingTodoStrategy.java`
+- **Calculation Service**: `service/TodoCalculationService.java`
+- **Dependency Injection**: Throughout all service and controller classes
 
 ### 🧪 Testing the Application
 
@@ -284,6 +293,154 @@ todoapp2/
 4. **Test deadline tasks** with past due dates
 5. **Test saving goals** by adding money
 6. **Try editing and deleting** tasks and collections
+
+## 🏗️ SOLID Architecture Principles
+
+This application implements all five SOLID principles to ensure maintainable, extensible, and testable code:
+
+### 🎯 **Single Responsibility Principle (SRP)**
+
+**Applied to:**
+- **`Todo` Entity**: Removed business logic methods like `getProgress()` to focus solely on data representation
+- **`TodoCalculationService`**: Extracted calculation logic for progress, goal completion, and deadline checks
+- **Controller Classes**: Each controller handles only one domain (Auth, Todo, Collection)
+- **Service Classes**: Focused responsibilities (Auth, JWT, Todo operations)
+
+**Example:**
+```java
+// Before SRP: Entity had business logic
+public BigDecimal getProgress() {
+    if (type == TodoType.SAVING && targetAmount != null) {
+        return currentAmount.divide(targetAmount, 2, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+    }
+    return BigDecimal.ZERO;
+}
+
+// After SRP: Extracted to dedicated service
+@Service
+public class TodoCalculationService {
+    public BigDecimal calculateProgress(Todo todo) { /* logic */ }
+    public boolean isGoalReached(Todo todo) { /* logic */ }
+}
+```
+
+### 🔓 **Open-Closed Principle (OCP)**
+
+**Applied to:**
+- **Strategy Pattern for Todo Completion**: New todo types can be added without modifying existing completion logic
+- **`TodoCompletionStrategy` Interface**: Extensible completion behaviors
+- **Concrete Strategies**: `StandardTodoStrategy`, `DeadlineTodoStrategy`, `SavingTodoStrategy`
+
+**Example:**
+```java
+// Interface allows extension without modification
+public interface TodoCompletionStrategy {
+    void complete(Todo todo);
+    boolean canComplete(Todo todo);
+}
+
+// Easy to add new types without changing existing code
+public class PriorityTodoStrategy implements TodoCompletionStrategy {
+    @Override
+    public void complete(Todo todo) {
+        // New completion logic for priority tasks
+    }
+}
+```
+
+### 🔄 **Liskov Substitution Principle (LSP)**
+
+**Applied to:**
+- **Strategy Implementations**: All concrete strategies can be substituted for the interface without breaking functionality
+- **Repository Interfaces**: JPA repository implementations are interchangeable
+- **Service Layer**: Interface-based design allows for implementation substitution
+
+**Example:**
+```java
+// Any strategy can be substituted without breaking the service
+public void completeTodo(Todo todo) {
+    TodoCompletionStrategy strategy = strategyFactory.getStrategy(todo);
+    strategy.complete(todo); // Works with any implementation
+}
+```
+
+### 🔀 **Interface Segregation Principle (ISP)**
+
+**Applied to:**
+- **Focused Interfaces**: Small, specific interfaces rather than large ones
+- **`TodoCompletionStrategy`**: Contains only completion-related methods
+- **Repository Interfaces**: Specific to each entity without unnecessary methods
+- **Service Interfaces**: Focused on specific business capabilities
+
+**Example:**
+```java
+// Specific interface for completion logic
+public interface TodoCompletionStrategy {
+    void complete(Todo todo);
+    boolean canComplete(Todo todo);
+}
+
+// Separate interface for calculations
+public interface TodoCalculationService {
+    BigDecimal calculateProgress(Todo todo);
+    boolean isGoalReached(Todo todo);
+    boolean isOverdue(Todo todo);
+}
+```
+
+### ⬇️ **Dependency Inversion Principle (DIP)**
+
+**Applied to:**
+- **Constructor Injection**: High-level modules depend on abstractions, not concretions
+- **Strategy Factory**: Service depends on factory interface, not concrete implementations
+- **Service Layer**: Controllers depend on service interfaces
+- **Repository Layer**: Services depend on repository interfaces, not implementations
+
+**Example:**
+```java
+// High-level TodoService depends on abstractions
+@Service
+public class TodoService {
+    private final TodoRepository todoRepository;
+    private final TodoCalculationService calculationService;
+    private final TodoStrategyFactory strategyFactory;
+    
+    // Constructor injection ensures DIP compliance
+    public TodoService(TodoRepository todoRepository,
+                      TodoCalculationService calculationService,
+                      TodoStrategyFactory strategyFactory) {
+        this.todoRepository = todoRepository;
+        this.calculationService = calculationService;
+        this.strategyFactory = strategyFactory;
+    }
+}
+```
+
+### 🎭 **Design Patterns Used**
+
+1. **Strategy Pattern**: 
+   - **Purpose**: Encapsulate completion algorithms for different todo types
+   - **Implementation**: `TodoCompletionStrategy` with concrete strategies
+   - **Benefit**: Easy to add new todo types without modifying existing code
+
+2. **Factory Pattern**:
+   - **Purpose**: Create appropriate strategy instances based on todo type
+   - **Implementation**: `TodoStrategyFactory`
+   - **Benefit**: Centralized strategy creation and type mapping
+
+3. **Dependency Injection**:
+   - **Purpose**: Loose coupling between components
+   - **Implementation**: Constructor injection throughout the application
+   - **Benefit**: Testability and flexibility
+
+### 📊 **Architecture Benefits**
+
+- **✅ Maintainability**: Changes to one component don't affect others
+- **✅ Testability**: Easy to mock dependencies and test in isolation
+- **✅ Extensibility**: New features can be added without modifying existing code
+- **✅ Readability**: Clear separation of concerns and focused responsibilities
+- **✅ Scalability**: Modular design supports team development and growth
 
 ## 🛡️ Security Features
 

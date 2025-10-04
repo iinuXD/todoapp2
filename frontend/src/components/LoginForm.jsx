@@ -25,7 +25,7 @@ function LoginForm({ onToggle }) {
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
-          <p className="mt-2 text-gray-600">Access your enterprise dashboard</p>
+          <p className="mt-2 text-gray-600">Access your TodoList dashboard</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
