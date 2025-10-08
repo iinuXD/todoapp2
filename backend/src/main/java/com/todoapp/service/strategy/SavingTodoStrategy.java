@@ -4,11 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.todoapp.entity.Todo;
 
-/**
- * Saving goal todo completion strategy.
- * Follows Single Responsibility Principle (SRP) - only handles saving goal completion logic.
- * Follows Liskov Substitution Principle (LSP) - can be substituted for TodoCompletionStrategy.
- */
+
 @Component
 public class SavingTodoStrategy implements TodoCompletionStrategy {
     

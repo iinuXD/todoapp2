@@ -27,7 +27,6 @@ public class TodoService {
     private final TodoStrategyFactory strategyFactory;
     private final TodoCalculationService calculationService;
 
-    // Constructor injection following DIP
     public TodoService(TodoRepository todoRepository,
                       TodoStrategyFactory strategyFactory,
                       TodoCalculationService calculationService) {
@@ -71,10 +70,6 @@ public class TodoService {
         return null;
     }
 
-    /**
-     * Completes a todo using the appropriate strategy.
-     * Demonstrates Strategy Pattern and Open/Closed Principle.
-     */
     public Todo completeTodo(Long id, TodoCollection collection) {
         Optional<Todo> todoOpt = todoRepository.findByIdAndCollection(id, collection);
         if (todoOpt.isPresent()) {
@@ -91,10 +86,6 @@ public class TodoService {
         return null;
     }
 
-    /**
-     * Adds money to a saving goal and applies auto-completion logic.
-     * Uses calculation service for business logic separation (SRP).
-     */
     public Todo addMoneyToSavingGoal(Long id, BigDecimal amount, TodoCollection collection) {
         Optional<Todo> todoOpt = todoRepository.findByIdAndCollection(id, collection);
         if (todoOpt.isPresent()) {

@@ -4,12 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.todoapp.entity.Todo;
 
-/**
- * Factory for creating todo completion strategies.
- * Follows Dependency Inversion Principle (DIP) - depends on abstractions, not concretions.
- * Follows Single Responsibility Principle (SRP) - only responsible for strategy creation.
- * Follows Open/Closed Principle (OCP) - can be extended with new strategies without modification.
- */
+
 @Component
 public class TodoStrategyFactory {
     

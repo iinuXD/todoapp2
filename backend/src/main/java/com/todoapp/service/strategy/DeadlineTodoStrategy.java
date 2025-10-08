@@ -6,11 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.todoapp.entity.Todo;
 
-/**
- * Deadline todo completion strategy.
- * Follows Single Responsibility Principle (SRP) - only handles deadline todo completion logic.
- * Follows Liskov Substitution Principle (LSP) - can be substituted for TodoCompletionStrategy.
- */
+
 @Component
 public class DeadlineTodoStrategy implements TodoCompletionStrategy {
     
