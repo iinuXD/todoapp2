@@ -9,11 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.todoapp.entity.Todo;
 
-/**
- * Service for todo calculations following Single Responsibility Principle (SRP).
- * Responsibility: Handle all calculation logic for todos.
- * Separated from Todo entity to follow separation of concerns.
- */
+
 @Service
 public class TodoCalculationService {
     

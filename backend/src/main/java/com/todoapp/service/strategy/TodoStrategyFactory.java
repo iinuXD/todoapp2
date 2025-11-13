@@ -20,12 +20,7 @@ public class TodoStrategyFactory {
         this.savingStrategy = savingStrategy;
     }
     
-    /**
-     * Gets the appropriate strategy for the given todo type.
-     * @param type the todo type
-     * @return the corresponding completion strategy
-     * @throws IllegalArgumentException if todo type is not supported
-     */
+
     public TodoCompletionStrategy getStrategy(Todo.TodoType type) {
         return switch (type) {
             case STANDARD -> standardStrategy;
@@ -34,11 +29,7 @@ public class TodoStrategyFactory {
         };
     }
     
-    /**
-     * Gets the appropriate strategy for the given todo.
-     * @param todo the todo
-     * @return the corresponding completion strategy
-     */
+    
     public TodoCompletionStrategy getStrategy(Todo todo) {
         return getStrategy(todo.getType());
     }
